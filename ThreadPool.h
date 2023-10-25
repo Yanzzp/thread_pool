@@ -47,27 +47,3 @@ namespace pthread {
 
     };
 }
-
-class ThreadPool {
-private:
-    int minThreadNum;
-    int maxThreadNum;
-    int busyNum;
-    int aliveNum;
-    int m_exitNum;
-    static std::mutex mtx;
-    static std::condition_variable m_notEmpty;
-    static std::mutex m_lock;
-    std::vector<std::thread> m_threads;
-    TaskQueue *taskQueue;
-    bool shutdown = false;
-    static void *worker(void *arg);
-    static void *manager(void *arg);
-
-
-public:
-    ThreadPool(int min=2, int max=10);
-
-
-
-};
