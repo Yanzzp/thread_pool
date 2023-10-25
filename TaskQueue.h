@@ -66,7 +66,7 @@ public:
 
     void addTask(callback func, void *arg);
 
-    void getTask(Task &task);
+    Task takeTask();
 
     // 获取当前队列中任务个数
     inline int taskNumber() {

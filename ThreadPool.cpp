@@ -1,4 +1,5 @@
 #include <csignal>
+#include <unistd.h>
 #include "ThreadPool.h"
 
 using namespace std;
@@ -116,7 +117,7 @@ void *pthread::ThreadPool::worker(void *arg) {
         // 执行任务
         cout << "thread " << to_string(pthread_self()) << " start working..." << endl;
         task.function(task.arg);
-        delete task.arg;
+
         task.arg = nullptr;
 
         // 任务处理结束
@@ -256,35 +257,37 @@ void *ThreadPool::worker(void *arg) {
             // 解除阻塞之后, 判断是否要销毁线程
             if (pool->m_exitNum > 0) {
                 pool->m_exitNum--;
-                if (pool->m_aliveNum > pool->m_minNum) {
-                    pool->m_aliveNum--;
-                    pthread_mutex_unlock(&pool->m_lock);
-                    pool->threadExit();
+                if (pool->aliveNum > pool->minThreadNum) {
+                    pool->aliveNum--;
+                    // unique_lock的析构函数会自动调用unlock()方法
+                    // lock.unlock();
+                    return nullptr;
                 }
             }
         }
         // 判断线程池是否被关闭了
         if (pool->shutdown) {
-            pthread_mutex_unlock(&pool->m_lock);
-            pool->threadExit();
+            return nullptr;
         }
 
         // 从任务队列中取出一个任务
-        Task task = pool->m_taskQ->takeTask();
+        Task task = pool->taskQueue->takeTask();
         // 工作的线程+1
-        pool->m_busyNum++;
+        pool->busyNum++;
         // 线程池解锁
         mtx.unlock();
         // 执行任务
         cout << "thread " << to_string(pthread_self()) << " start working..." << endl;
         task.function(task.arg);
-        delete task.arg;
+
         task.arg = nullptr;
 
         // 任务处理结束
         cout << "thread " << to_string(pthread_self()) << " end working...";
-        pthread_mutex_lock(&pool->m_lock);
-        pool->m_busyNum--;
-        pthread_mutex_unlock(&pool->m_lock);
+        m_lock.lock();
+        pool->busyNum--;
+        m_lock.unlock();
     }
 }
+
+

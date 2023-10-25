@@ -63,8 +63,11 @@ private:
     bool shutdown = false;
     static void *worker(void *arg);
     static void *manager(void *arg);
+
+
 public:
     ThreadPool(int min=2, int max=10);
+
 
 
 };

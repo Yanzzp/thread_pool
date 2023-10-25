@@ -56,10 +56,14 @@ void TaskQueue::addTask(callback func, void *arg) {
     m_queue.push(task);
 }
 
-void TaskQueue::getTask(Task &task) {
+Task TaskQueue::takeTask() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_queue.size() > 0) {
-        task = m_queue.front();
+    Task temp;
+    if (!m_queue.empty())
+    {
+        temp = m_queue.front();
         m_queue.pop();
     }
+
+    return temp;
 }
