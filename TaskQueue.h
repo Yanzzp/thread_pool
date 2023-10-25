@@ -2,39 +2,54 @@
 #define THREADPOOL_TASKQUEUE_H
 
 #include <queue>
-#include <mutex>
+#include <pthread.h>
 using callback = void (*)(void *);
 
-struct Task {
-
-    Task() {
+// 定义任务结构体
+using callback = void(*)(void*);
+struct Task
+{
+    Task()
+    {
         function = nullptr;
-        args = nullptr;
+        arg = nullptr;
     }
-
-    Task(callback function, void *args) : function(function), args(args) {}
-
+    Task(callback f, void* arg)
+    {
+        function = f;
+        this->arg = arg;
+    }
     callback function;
-
-    void *args;
+    void* arg;
 };
 
-class TaskQueue {
-private:
-    std::queue<Task> tasksQueue;
-    std::mutex mutex;
+// 任务队列
+class TaskQueue
+{
 public:
     TaskQueue();
     ~TaskQueue();
 
-    void addTask(Task task);
-    void addTask(callback function, void *args);
+    // 添加任务
+    void addTask(Task& task);
+    void addTask(callback func, void* arg);
 
+    // 取出一个任务
     Task takeTask();
 
-    inline int taskNumber() { return tasksQueue.size(); }
+    // 获取当前队列中任务个数
+    inline int taskNumber()
+    {
+        return m_queue.size();
+    }
 
+private:
+    pthread_mutex_t m_mutex;    // 互斥锁
+    std::queue<Task> m_queue;   // 任务队列
 };
+
+
+
 
 
 #endif //THREADPOOL_TASKQUEUE_H
