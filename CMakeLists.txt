@@ -7,4 +7,5 @@ add_executable(ThreadPool main.cpp
         TaskQueue.cpp
         TaskQueue.h
         ThreadPool.cpp
-        ThreadPool.h)
+        ThreadPool.h
+        multithread.h)

@@ -3,6 +3,7 @@
 
 #include <queue>
 #include <pthread.h>
+#include <mutex>
 
 
 // 定义任务结构体
@@ -25,29 +26,54 @@ struct Task {
 };
 
 // 任务队列
-class TaskQueue {
-public:
-    TaskQueue();
+namespace pthread{
+    class TaskQueue {
+    public:
+        TaskQueue();
 
-    ~TaskQueue();
+        ~TaskQueue();
+
+        // 添加任务
+        void addTask(Task &task);
+
+        void addTask(callback func, void *arg);
+
+        // 取出一个任务
+        Task takeTask();
+
+        // 获取当前队列中任务个数
+        inline int taskNumber() {
+            return m_queue.size();
+        }
+
+    private:
+        pthread_mutex_t m_mutex;    // 互斥锁
+        std::queue<Task> m_queue;   // 任务队列
+    };
+}
+
+class TaskQueue {
+private:
+    std::mutex m_mutex;    // 互斥锁
+    std::queue<Task> m_queue;   // 任务队列
+public:
+    TaskQueue()=default;
+
+    ~TaskQueue()=default;
 
     // 添加任务
     void addTask(Task &task);
 
     void addTask(callback func, void *arg);
 
-    // 取出一个任务
-    Task takeTask();
+    void getTask(Task &task);
 
     // 获取当前队列中任务个数
     inline int taskNumber() {
         return m_queue.size();
     }
-
-private:
-    pthread_mutex_t m_mutex;    // 互斥锁
-    std::queue<Task> m_queue;   // 任务队列
 };
+
 
 
 #endif //THREADPOOL_TASKQUEUE_H

@@ -33,7 +33,7 @@ pthread::ThreadPool::ThreadPool(int minNum, int maxNum) {
         }
         // 创建管理者线程, 1个
         pthread_create(&m_managerID, NULL, manager, this);
-    } while (0);
+    } while (false);
 }
 
 pthread::ThreadPool::~ThreadPool() {
@@ -125,8 +125,6 @@ void *pthread::ThreadPool::worker(void *arg) {
         pool->m_busyNum--;
         pthread_mutex_unlock(&pool->m_lock);
     }
-
-    return nullptr;
 }
 
 
@@ -192,47 +190,101 @@ void pthread::ThreadPool::threadExit() {
 }
 
 
-ThreadPool::ThreadPool(int numThreads): m_threads(numThreads), m_shutdown(false) {
-    for (auto &t: m_threads) {
-        t = std::thread(&ThreadPool::worker, this);
-    }
+ThreadPool::ThreadPool(int min, int max): minThreadNum(min), maxThreadNum(max){
+
 }
 
-ThreadPool::~ThreadPool() {
-    shutdown();
-}
+void *ThreadPool::manager(void *arg) {
+    ThreadPool *pool = static_cast<ThreadPool *>(arg);
+    while (!pool->shutdown) {
+        // 每隔5s检测一次
+        sleep(5);
+        // 取出线程池中的任务数和线程数量
+        //  取出工作的线程池数量
+        std::mutex lock;
+        int queueSize = pool->taskQueue->taskNumber();
+        int liveNum = pool->aliveNum;
+        int busyNum = pool->busyNum;
+        std::mutex unlock;
 
+        // 创建线程
+        const int NUMBER = 2;
+        // 当前任务个数>存活的线程数 && 存活的线程数<最大线程个数
+        if (queueSize > liveNum && liveNum < pool->maxThreadNum) {
 
-
-void ThreadPool::shutdown() {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        m_shutdown.store(true);
-        m_condVar.notify_all();
-    }
-    for (auto &t: m_threads) {
-        if (t.joinable()) t.join();
-    }
-}
-
-void ThreadPool::addTask(callback func, void *arg) {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        tasksQueue.addTask(func, arg);
-        m_condVar.notify_one();
-    }
-}
-
-void ThreadPool::worker() {
-    while (!m_shutdown.load()) {
-        Task task;
-        {
-            std::unique_lock<std::mutex> lock(mutex);
-            m_condVar.wait(lock, [this] { return m_shutdown.load() || tasksQueue.taskNumber() > 0; });
-            if (m_shutdown.load() && tasksQueue.taskNumber() == 0) return;
-            task = tasksQueue.takeTask();
+            std::mutex lock1;
+            int num = 0;
+            for (int i = 0; i < pool->maxThreadNum && num < NUMBER
+                            && pool->aliveNum < pool->maxThreadNum; ++i) {
+                if (!pool->m_threads[i].joinable()) {
+                    pool->m_threads[i] = std::thread(worker, pool);
+                    num++;
+                    pool->aliveNum++;
+                }
+            }
+            std::mutex unlock1;
         }
-        task.function(task.arg);
+
+        // 销毁多余的线程
+        // 忙线程*2 < 存活的线程数目 && 存活的线程数 > 最小线程数量
+        if (busyNum * 2 < liveNum && liveNum > pool->minThreadNum) {
+            m_lock.lock();
+            pool->m_exitNum = NUMBER;
+            m_lock.unlock();
+            for (int i = 0; i < NUMBER; ++i) {
+                m_notEmpty.notify_one();
+            }
+        }
     }
 }
 
+// 工作线程任务函数
+void *ThreadPool::worker(void *arg) {
+    ThreadPool *pool = static_cast<ThreadPool *>(arg);
+    // 一直不停的工作
+    while (true) {
+        // 访问任务队列(共享资源)加锁
+        mtx.lock();
+        // 判断任务队列是否为空, 如果为空工作线程阻塞
+        while (pool->taskQueue->taskNumber() == 0 && !pool->shutdown) {
+            cout << "thread " << to_string(pthread_self()) << " waiting..." << endl;
+            // 阻塞线程
+            std::unique_lock<std::mutex> lock(m_lock);
+            m_notEmpty.wait(lock);
+
+
+            // 解除阻塞之后, 判断是否要销毁线程
+            if (pool->m_exitNum > 0) {
+                pool->m_exitNum--;
+                if (pool->m_aliveNum > pool->m_minNum) {
+                    pool->m_aliveNum--;
+                    pthread_mutex_unlock(&pool->m_lock);
+                    pool->threadExit();
+                }
+            }
+        }
+        // 判断线程池是否被关闭了
+        if (pool->shutdown) {
+            pthread_mutex_unlock(&pool->m_lock);
+            pool->threadExit();
+        }
+
+        // 从任务队列中取出一个任务
+        Task task = pool->m_taskQ->takeTask();
+        // 工作的线程+1
+        pool->m_busyNum++;
+        // 线程池解锁
+        mtx.unlock();
+        // 执行任务
+        cout << "thread " << to_string(pthread_self()) << " start working..." << endl;
+        task.function(task.arg);
+        delete task.arg;
+        task.arg = nullptr;
+
+        // 任务处理结束
+        cout << "thread " << to_string(pthread_self()) << " end working...";
+        pthread_mutex_lock(&pool->m_lock);
+        pool->m_busyNum--;
+        pthread_mutex_unlock(&pool->m_lock);
+    }
+}

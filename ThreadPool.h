@@ -48,27 +48,23 @@ namespace pthread {
     };
 }
 
-
 class ThreadPool {
-public:
-    explicit ThreadPool(int numThreads);
-    ~ThreadPool();
-
-
-
-    // Shutdown the pool and wait for all threads to finish
-    void shutdown();
-
-    // Submit a new task to the pool
-    void addTask(callback func, void *arg);
-
 private:
-    // Worker function for threads
-    void worker();
-
+    int minThreadNum;
+    int maxThreadNum;
+    int busyNum;
+    int aliveNum;
+    int m_exitNum;
+    static std::mutex mtx;
+    static std::condition_variable m_notEmpty;
+    static std::mutex m_lock;
     std::vector<std::thread> m_threads;
-    TaskQueue tasksQueue;
-    std::mutex mutex;
-    std::condition_variable m_condVar;
-    std::atomic<bool> m_shutdown;
+    TaskQueue *taskQueue;
+    bool shutdown = false;
+    static void *worker(void *arg);
+    static void *manager(void *arg);
+public:
+    ThreadPool(int min=2, int max=10);
+
+
 };
