@@ -9,5 +9,5 @@ add_executable(ThreadPool main.cpp
         ThreadPool.cpp
         ThreadPool.h
         multithread.h
-        threadpool.cpp
+        threadpools.h
         )
