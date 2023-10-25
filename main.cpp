@@ -82,8 +82,10 @@ try {
     std::cout << " =======  commit all2 ========= " << std::this_thread::get_id() << std::endl;
 
     for (auto && result : results)
+    {
         std::cout << result.get() << ' ';
-    std::cout << std::endl;
+        std::cout << std::endl;
+    }
     return 0;
 }
 catch (std::exception& e) {
