@@ -1,3 +1,4 @@
+#pragma once
 #ifndef THREADPOOL_TASKQUEUE_H
 #define THREADPOOL_TASKQUEUE_H
 

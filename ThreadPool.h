@@ -1,3 +1,4 @@
+#pragma once
 #include "TaskQueue.h"
 #include <cstring>
 #include <iostream>
