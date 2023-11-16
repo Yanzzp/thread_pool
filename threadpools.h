@@ -14,6 +14,7 @@
 namespace std {
 //线程池最大容量,应尽量设小一点
 #define  THREADPOOL_MAX_NUM 16
+
 //线程池是否可以自动增长(如果需要,且不超过 THREADPOOL_MAX_NUM)
 //#define  THREADPOOL_AUTO_GROW
 //
@@ -125,7 +126,7 @@ namespace std {
                             if (!_run && _tasks.empty())
                                 return;
                             _idlThrNum--;
-                            task = move(_tasks.front()); // 按先进先出从队列取一个 task
+                            task = std::move(_tasks.front()); // 按先进先出从队列取一个 task
                             _tasks.pop();
                         }
                         task();//执行任务
