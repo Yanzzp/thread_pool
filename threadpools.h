@@ -16,8 +16,9 @@ namespace std {
 #define  THREADPOOL_MAX_NUM 16
 
 //线程池是否可以自动增长(如果需要,且不超过 THREADPOOL_MAX_NUM)
-//#define  THREADPOOL_AUTO_GROW
-//
+#define  THREADPOOL_AUTO_GROW
+
+
 //线程池,可以提交变参函数或拉姆达表达式的匿名函数执行,可以获取执行返回值
 //不直接支持类成员函数, 支持类静态成员函数或全局函数,Opteron()函数等
     class threadpool {
@@ -73,7 +74,7 @@ namespace std {
             }
 #ifdef THREADPOOL_AUTO_GROW
             if (_idlThrNum < 1 && _pool.size() < THREADPOOL_MAX_NUM)
-            addThread(1);
+                addThread(1);
 #endif // !THREADPOOL_AUTO_GROW
             _task_cv.notify_one(); // 唤醒一个线程执行
 
@@ -90,7 +91,7 @@ namespace std {
             }
 #ifdef THREADPOOL_AUTO_GROW
             if (_idlThrNum < 1 && _pool.size() < THREADPOOL_MAX_NUM)
-            addThread(1);
+                addThread(1);
 #endif // !THREADPOOL_AUTO_GROW
             _task_cv.notify_one();
         }
@@ -102,15 +103,15 @@ namespace std {
         int thrCount() { return _pool.size(); }
 
 #ifndef THREADPOOL_AUTO_GROW
-    private:
+        private:
 #endif // !THREADPOOL_AUTO_GROW
 
         //添加指定数量的线程
         void addThread(unsigned short size) {
 #ifdef THREADPOOL_AUTO_GROW
             if (!_run)    // stoped ??
-            throw runtime_error("Grow on ThreadPool is stopped.");
-        unique_lock<mutex> lockGrow{ _lockGrow }; //自动增长锁
+                throw runtime_error("Grow on ThreadPool is stopped.");
+            unique_lock<mutex> lockGrow{_lockGrow}; //自动增长锁
 #endif // !THREADPOOL_AUTO_GROW
             for (; _pool.size() < THREADPOOL_MAX_NUM && size > 0; --size) {   //增加线程数量,但不超过 预定义数量 THREADPOOL_MAX_NUM
                 _pool.emplace_back([this] { //工作线程函数
@@ -131,8 +132,8 @@ namespace std {
                         }
                         task();//执行任务
 #ifdef THREADPOOL_AUTO_GROW
-                        if (_idlThrNum>0 && _pool.size() > _initSize) //支持自动释放空闲线程,避免峰值过后大量空闲线程
-                        return;
+                        if (_idlThrNum > 0 && _pool.size() > _initSize) //支持自动释放空闲线程,避免峰值过后大量空闲线程
+                            return;
 #endif
                         {
                             unique_lock<mutex> lock{_lock};
